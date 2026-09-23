@@ -6,22 +6,45 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from unittest.mock import patch
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Body, FastAPI, HTTPException
 
 from .ml_stub import Scenario, StubML
 
 
 def create_app(adapter=None):
-    from backend.app import main, ml
+    from backend.app import main, ml, telegram, storage
+    from .telegram_stub import FakeBotAPI
     adapter = adapter or StubML()
+    bot_api = FakeBotAPI()
+    bot = telegram.TelegramService(telegram.Config(True, "synthetic-token", True), bot_api)
+    # Explicit ticks make test runs deterministic. No external API, worker thread or real token.
+    bot.start = bot.connect
 
     @asynccontextmanager
     async def lifespan(app):
-        with patch.object(ml, "probe", adapter.probe), patch.object(ml, "process_audio", adapter.process_audio), patch.object(ml, "process_text", adapter.process_text):
+        with patch.object(ml, "probe", adapter.probe), patch.object(ml, "process_audio", adapter.process_audio), patch.object(ml, "process_text", adapter.process_text), patch.object(telegram, "TelegramService", return_value=bot):
             async with main.lifespan(app):
+                with storage.connection() as db:
+                    offset = db.execute("SELECT value FROM telegram_meta WHERE key = 'offset'").fetchone()
+                bot_api.next_update = int(offset["value"]) if offset else 1
                 yield
 
     app = FastAPI(title="TEST ONLY — synthetic ML", lifespan=lifespan)
+
+    @app.get("/__test__/telegram")
+    def telegram_state():
+        return bot_api.state()
+
+    @app.post("/__test__/telegram/update")
+    def telegram_update(value: dict = Body(...)):
+        bot_api.push(value)
+        bot.cycle()
+        return bot_api.state()
+
+    @app.post("/__test__/telegram/tick")
+    def telegram_tick():
+        bot.cycle()
+        return bot_api.state()
 
     @app.get("/__test__/state")
     def state():

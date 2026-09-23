@@ -41,6 +41,8 @@ def test_stub_health_and_outputs_cannot_claim_real_inference(isolated_storage):
         response = client.get("/__test__/state")
         assert response.status_code == 404 or "text/html" in response.headers.get("content-type", "")
         assert client.post("/__test__/scenario", json={"name": "review"}).status_code in (404, 405)
+        assert client.post("/__test__/telegram/update", json={"message": {}}).status_code in (404, 405)
+        assert client.post("/__test__/telegram/tick").status_code in (404, 405)
 
 
 @pytest.mark.parametrize("language", ["ru", "kz", "mixed"])

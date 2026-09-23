@@ -14,7 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, Response
 
-from . import storage
+from . import storage, telegram
 from .export import render_docx
 
 
@@ -29,12 +29,16 @@ async def lifespan(_: FastAPI):
     global executor
     storage.initialize()
     storage.recover_interrupted_jobs()
+    telegram.service = telegram.TelegramService()
+    telegram.service.start()
     executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="local-ml")
     for record in storage.pending_jobs():
         executor.submit(_run_job, record["meeting"]["id"])
     try:
         yield
     finally:
+        telegram.service.stop()
+        telegram.service = None
         # Drain active inference before releasing storage; unstarted jobs remain
         # queued in SQLite and will resume at the next startup.
         worker, executor = executor, None
@@ -48,6 +52,7 @@ def _enqueue(meeting_id: str) -> None:
 
 
 app = FastAPI(title="Local Meeting Minutes", lifespan=lifespan)
+app.include_router(telegram.router)
 app.add_middleware(
     CORSMiddleware,
     allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",

@@ -12,6 +12,7 @@ import type {
 import { api, ApiError, body, request } from "./api";
 import Icon from "./Icon";
 import CreateMeeting from "./CreateMeeting";
+import TelegramPanel from "./TelegramPanel";
 
 type View = "meetings" | "tasks" | "notifications";
 const initialFor = (m: Meeting): Draft =>
@@ -719,6 +720,7 @@ export default function App() {
                                   </button>
                                 </div>
                               ))}
+                              <TelegramPanel key={selected.id} meetingId={selected.id} participants={selected.participants} unsaved={dirty} />
                             </section>
                             <section className="editor-section">
                               <div className="editor-heading">
@@ -1070,6 +1072,7 @@ export default function App() {
                     </button>
                     <div className="global-task-main">
                       <strong>{a.title}</strong>
+                      <small>Поручение №{a.id.slice(0, 8)}</small>
                       <button
                         className="meeting-link"
                         onClick={() => openMeeting(a.meeting_id)}
@@ -1112,8 +1115,8 @@ export default function App() {
             <section className="secondary-page">
               <h1>Напоминания</h1>
               <p>
-                Локальный список по подтверждённым датам. Внешние сообщения не
-                отправляются.
+                Локальный список по подтверждённым датам. Telegram подключается
+                отдельно в карточке участников встречи.
               </p>
               {extraErrors.notifications && (
                 <p className="error-banner" role="alert">

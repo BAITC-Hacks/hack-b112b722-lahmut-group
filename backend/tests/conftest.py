@@ -8,6 +8,7 @@ from backend.app import main, storage
 
 @pytest.fixture
 def isolated_storage(tmp_path, monkeypatch):
+    monkeypatch.setenv("TELEGRAM_ENABLED", "false")
     monkeypatch.setattr(storage, "DATA_DIR", tmp_path)
     monkeypatch.setattr(storage, "DB_PATH", tmp_path / "meetings.sqlite3")
     monkeypatch.setattr(storage, "UPLOAD_DIR", tmp_path / "uploads")
