@@ -1,4 +1,5 @@
-import { test, expect, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { test, expect } from "../integration/fixtures";
 import { readFile, open, unlink } from "node:fs/promises";
 
 async function demo(page: Page) {

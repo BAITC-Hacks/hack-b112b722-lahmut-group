@@ -353,6 +353,11 @@ export default function App() {
           </button>
         </header>
         <div className="page-content">
+          {health?.details.test_mode === true && (
+            <div className="notice-box" role="note" data-testid="ml-stub-banner">
+              Тестовый режим: ML имитируется заглушкой. Реальные модели не запускались.
+            </div>
+          )}
           <details className="health-panel">
             <summary>
               {health ? "API доступен" : "API: нет подтверждения доступности"} ·
