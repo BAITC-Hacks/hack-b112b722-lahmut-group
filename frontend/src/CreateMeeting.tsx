@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api, body } from "./api";
 import type { Meeting, Participant } from "./types";
+import Icon from "./Icon";
 
 export default function CreateMeeting({
   onClose,
@@ -119,14 +120,19 @@ export default function CreateMeeting({
     >
       <form onSubmit={submit}>
         <div className="modal-head">
-          <h2 id="create-title">Новая встреча</h2>
+          <div>
+            <div className="eyebrow">НАЧНЁМ С МАТЕРИАЛОВ</div>
+            <h2 id="create-title">Новая встреча</h2>
+            <p>Добавьте запись или готовую расшифровку.</p>
+          </div>
           <button
             type="button"
-            className="secondary-button"
+            className="icon-button"
+            aria-label="Закрыть"
             disabled={busy}
             onClick={onClose}
           >
-            Закрыть
+            <Icon name="close" />
           </button>
         </div>
         <fieldset disabled={busy} className="editor-fields">
@@ -140,6 +146,7 @@ export default function CreateMeeting({
                 setError("");
               }}
             >
+              <Icon name="mic" size={17} />
               Аудио / видео
             </button>
             <button
@@ -151,6 +158,7 @@ export default function CreateMeeting({
                 setError("");
               }}
             >
+              <Icon name="file" size={17} />
               Импорт текста
             </button>
           </div>
@@ -164,7 +172,7 @@ export default function CreateMeeting({
               onChange={(e) => setTitle(e.target.value)}
             />
           </label>
-          <div className="form-row">
+          <div className="form-grid">
             <label className="form-label">
               Дата встречи
               <input
@@ -196,17 +204,29 @@ export default function CreateMeeting({
           </label>
           {mode === "audio" ? (
             <>
-              <label className="form-label">
-                Файл записи
+              <label className={`upload-zone ${file ? "has-file" : ""}`}>
+                <span className="upload-icon">
+                  <Icon name={file ? "file" : "upload"} size={25} />
+                </span>
+                <strong>{file ? file.name : "Выберите файл записи"}</strong>
+                <span>
+                  {file
+                    ? `${(file.size / 1024 / 1024).toFixed(1)} МБ · нажмите, чтобы заменить`
+                    : "Аудио или видео с вашего устройства"}
+                </span>
+                <span className="upload-formats">
+                  WAV, MP3, M4A, MP4, WebM, OGG, FLAC · до 100 МБ
+                </span>
                 <input
                   type="file"
+                  aria-label="Файл записи"
                   accept=".wav,.mp3,.m4a,.mp4,.webm,.ogg,.flac"
                   onChange={(e) => setFile(e.target.files?.[0] || null)}
                 />
               </label>
-              <p>
-                WAV, MP3, M4A, MP4, WebM, OGG, FLAC · до 100 МБ. Импорт готовой
-                записи из любой платформы.
+              <p className="form-hint">
+                Подойдёт сохранённая запись из Teams, Zoom или Google Meet.
+                Подключение к онлайн-встречам пока не поддерживается.
               </p>
               <label className="consent">
                 <input
@@ -244,7 +264,10 @@ export default function CreateMeeting({
           </p>
         )}
         <div className="modal-footer">
-          <span>Обработка на сервере команды</span>
+          <span>
+            <Icon name="shield" size={16} />
+            На сервере команды
+          </span>
           <button className="primary-button" disabled={busy}>
             {busy ? "Загружаем…" : "Создать встречу"}
           </button>

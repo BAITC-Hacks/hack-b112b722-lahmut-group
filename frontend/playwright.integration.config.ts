@@ -3,7 +3,7 @@ import { defineConfig } from "@playwright/test";
 process.env.MANAGED_ML_STUB = "1";
 export default defineConfig({
   testDir: ".",
-  testMatch: ["tests/review.spec.ts", "integration/*.spec.ts"],
+  testMatch: ["tests/*.spec.ts", "integration/*.spec.ts"],
   timeout: 60000,
   expect: { timeout: 12000 },
   workers: 1,

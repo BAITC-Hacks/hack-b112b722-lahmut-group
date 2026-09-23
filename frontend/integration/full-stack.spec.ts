@@ -33,6 +33,10 @@ async function createText(request: APIRequestContext, title: string) {
 }
 async function open(page: Page, title: string) {
   await page.goto("/");
+  await page.getByRole("button", { name: "Встречи", exact: true }).click();
+  await expect(page.getByRole("article", { name: "Протокол встречи" })).toBeVisible();
+  const library = page.getByRole("button", { name: /^Все встречи/ });
+  if (await library.getAttribute("aria-expanded") !== "true") await library.click();
   await page.locator(".meeting-row").filter({ hasText: title }).click();
 }
 async function uploadUI(page: Page, title: string, buffer = wav()) {
@@ -82,6 +86,7 @@ test("audio upload → real queue/stages → human review → approved DOCX → 
   expect((await request.post(`/api/meetings/${m.id}/approve`, { data: { revision: ready.revision } })).status()).toBe(409);
   const range = await request.get(`/api/meetings/${m.id}/audio`, { headers: { Range: "bytes=0-43" } });
   expect(range.status()).toBe(206); expect(await range.body()).toEqual(wav().subarray(0, 44));
+  await page.locator(".participants-section > summary").click();
   await page.getByRole("combobox", { name: "Голос участника 1", exact: true }).selectOption("SPEAKER_00");
   await page.getByRole("combobox", { name: "Голос участника 2", exact: true }).selectOption("SPEAKER_01");
   await page.getByRole("button", { name: `Источник ${ready.segments[0].id} поручения 1`, exact: true }).click();
@@ -89,6 +94,7 @@ test("audio upload → real queue/stages → human review → approved DOCX → 
   await expect.poll(() => page.locator("audio").evaluate((a: HTMLAudioElement) => a.currentTime)).toBeGreaterThanOrEqual(1);
   await review(page);
   await page.reload();
+  await page.locator(".participants-section > summary").click();
   await expect(page.getByRole("combobox", { name: "Голос участника 1", exact: true })).toHaveValue("SPEAKER_00");
   await expect(page.getByLabel("Исходный срок 2", { exact: true })).toHaveValue("после совещания");
   await expect(page.getByLabel("Дата срока 2", { exact: true })).toHaveValue("");
@@ -228,6 +234,7 @@ test("empty extraction supports manual participant/task/evidence CRUD and approv
   const ready = await finished(request, m.id);
   await open(page, m.title);
   await expect(page.locator(".action-card")).toHaveCount(0);
+  await page.locator(".participants-section > summary").click();
   await page.getByRole("button", { name: "Добавить участника", exact: true }).click();
   await page.getByLabel("Имя участника 1", { exact: true }).fill("Қанат");
   await page.getByRole("combobox", { name: "Голос участника 1", exact: true }).selectOption("SPEAKER_00");
@@ -283,6 +290,7 @@ test("crash during ML marks active job failed and resumes persisted queued job",
   await finished(request, queued.id);
   await open(page, active.title);
   await expect(page.locator(".failed-box")).toContainText("restart");
+  await page.getByRole("button", { name: /^Все встречи/ }).click();
   await page.locator(".meeting-row").filter({ hasText: queued.title }).click();
   await expect(page.getByLabel("Поручение 1", { exact: true })).toBeVisible();
 });
