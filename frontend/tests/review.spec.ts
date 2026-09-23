@@ -68,6 +68,7 @@ test("real backend: demo → sources → save → approve → DOCX → tasks →
   await expect(page.getByLabel("Исходный срок 1", { exact: true })).toHaveValue(
     m.actions[0].due_text,
   );
+  await page.locator(".participants-section > summary").click();
   await page
     .getByLabel("Имя участника 1", { exact: true })
     .fill("Алия Тестовая");
@@ -91,6 +92,7 @@ test("real backend: demo → sources → save → approve → DOCX → tasks →
   await expect(page.getByLabel("Дата срока 1", { exact: true })).toHaveValue(
     "2020-01-01",
   );
+  await page.locator(".participants-section > summary").click();
   await expect(page.getByLabel("Имя участника 1", { exact: true })).toHaveValue(
     "Алия Тестовая",
   );
@@ -352,8 +354,11 @@ test("simulated stage transition: ready result populates untouched editor", asyn
     }),
   );
   await page.goto("/");
+  await page.getByRole("button", { name: "Встречи", exact: true }).click();
   await expect(
-    page.getByText("Извлечение поручений", { exact: true }),
+    page
+      .locator(".processing-box")
+      .getByText("Извлечение поручений", { exact: true }),
   ).toBeVisible();
   ready = true;
   await expect(page.getByLabel("Краткий итог встречи")).toHaveValue(
@@ -443,6 +448,7 @@ test("simulated audio alignment: source seeks a real playable synthetic WAV", as
     route.fulfill({ body: wav, contentType: "audio/wav" }),
   );
   await page.goto("/");
+  await page.getByRole("button", { name: "Встречи", exact: true }).click();
   await expect
     .poll(() =>
       page.locator("audio").evaluate((el: HTMLAudioElement) => el.readyState),

@@ -18,6 +18,36 @@ export default function Icon({
     "aria-hidden": true as const,
   };
   const paths: Record<string, ReactNode> = {
+    sun: (
+      <>
+        <circle cx="12" cy="12" r="4" />
+        <path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+      </>
+    ),
+    moon: <path d="M20.7 13A9 9 0 0 1 11 3.3 9 9 0 1 0 20.7 13Z" />,
+    shield: (
+      <>
+        <path d="M12 3 4 6v6c0 5 8 9 8 9s8-4 8-9V6l-8-3Z" />
+        <path d="m8.5 12 2.5 2.5 4.5-5" />
+      </>
+    ),
+    calendar: (
+      <>
+        <rect x="3" y="5" width="18" height="16" rx="3" />
+        <path d="M7 3v4m10-4v4M3 11h18M7 15h2m3 0h2m3 0h1" />
+      </>
+    ),
+    refresh: (
+      <>
+        <path d="M20 8a8 8 0 0 0-14-3L3 8m0-5v5h5M4 16a8 8 0 0 0 14 3l3-3m0 5v-5h-5" />
+      </>
+    ),
+    info: (
+      <>
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 11v6M12 7v.1" />
+      </>
+    ),
     grid: (
       <>
         <rect x="3.5" y="3.5" width="7" height="7" rx="2" />
