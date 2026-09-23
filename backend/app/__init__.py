@@ -1,0 +1,1 @@
+"""Local meeting minutes application."""

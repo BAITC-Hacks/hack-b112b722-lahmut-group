@@ -1,0 +1,4 @@
+# Optional local speech stack. Install only on a machine provisioned for inference.
+# Models are separate downloads; this file installs libraries, not weights.
+faster-whisper>=1.2,<2
+pyannote.audio>=4,<5
