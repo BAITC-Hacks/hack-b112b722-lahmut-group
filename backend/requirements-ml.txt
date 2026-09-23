@@ -2,3 +2,4 @@
 # Models are separate downloads; this file installs libraries, not weights.
 faster-whisper>=1.2,<2
 pyannote.audio>=4,<5
+huggingface_hub>=0.34,<2
