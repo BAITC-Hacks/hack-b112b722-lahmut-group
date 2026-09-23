@@ -1,0 +1,18 @@
+[Unit]
+Description=Hatama API, UI, ML worker and optional Telegram bot
+After=network-online.target ollama.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/hatama
+ExecStart=/home/ubuntu/hatama/eval/.venv/bin/python -m backend --port 8000 --data-dir data/server-validation
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=300
+UMask=0077
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
