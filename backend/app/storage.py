@@ -9,6 +9,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+from . import telegram_store
+
 
 ROOT = Path(__file__).resolve().parents[2]
 load_dotenv(ROOT / ".env", override=False)
@@ -32,6 +34,9 @@ def initialize() -> None:
         db.execute("CREATE INDEX IF NOT EXISTS meetings_created_at ON meetings(created_at DESC)")
         if "approved_data" not in {row["name"] for row in db.execute("PRAGMA table_info(meetings)")}:
             db.execute("ALTER TABLE meetings ADD COLUMN approved_data TEXT")
+        telegram_store.initialize(db)
+        for row in db.execute("SELECT data FROM meetings").fetchall():
+            telegram_store.observe(db, json.loads(row["data"]))
         # Preserve existing approved records on upgrade as well as new approvals.
         for row in db.execute("SELECT id, data FROM meetings WHERE approved_data IS NULL").fetchall():
             if json.loads(row["data"])["approved"]:
@@ -54,6 +59,7 @@ def insert(meeting: dict, *, audio_path: str | None = None, transcript: str | No
     with _write_lock, connection() as db:
         db.execute("BEGIN IMMEDIATE")
         _check_action_ids(db, meeting)
+        telegram_store.observe(db, meeting)
         db.execute(
             "INSERT INTO meetings(id, created_at, data, audio_path, transcript) VALUES(?, ?, ?, ?, ?)",
             (meeting["id"], meeting["created_at"], json.dumps(meeting, ensure_ascii=False), audio_path, transcript),
@@ -96,6 +102,7 @@ def update(meeting_id: str, mutate):
         meeting = json.loads(row["data"])
         result = mutate(meeting)
         _check_action_ids(db, meeting)
+        telegram_store.observe(db, meeting)
         encoded = json.dumps(meeting, ensure_ascii=False)
         snapshot = (row["approved_data"] or encoded) if meeting["approved"] else None
         db.execute("UPDATE meetings SET data = ?, approved_data = ? WHERE id = ?", (encoded, snapshot, meeting_id))

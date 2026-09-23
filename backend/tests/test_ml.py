@@ -4,6 +4,7 @@ import os
 import json
 from pathlib import Path
 import shutil
+import sys
 import tempfile
 import unittest
 import wave
@@ -146,7 +147,7 @@ class LocalMLTests(unittest.TestCase):
                 self.assertEqual(command[command.index("-l") + 1], "auto")
                 output = command[command.index("-of") + 1] + ".json"
                 Path(output).write_text(json.dumps({"transcription": [{"offsets": {"from": 0, "to": 1000}, "text": "Сәлем"}]}))
-            with patch.dict(os.environ, {"WHISPER_CPP_BIN": "/bin/echo", "WHISPER_CPP_MODEL": str(model)}), \
+            with patch.dict(os.environ, {"WHISPER_CPP_BIN": sys.executable, "WHISPER_CPP_MODEL": str(model)}), \
                  patch.object(ml.subprocess, "run", side_effect=run):
                 self.assertEqual(ml._transcribe("unused.wav")[0]["text"], "Сәлем")
 
