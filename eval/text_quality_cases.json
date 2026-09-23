@@ -1,0 +1,140 @@
+{
+  "description": "Independent synthetic extraction checks. These are invented dialogues, not provided meeting gold. Expected values are evaluation-only and must never be sent to the model. due_text is the verbatim final deadline phrase, or null when absent. Counts follow len(expected); match by source evidence_terms before comparing assignee/deadline.",
+  "cases": [
+    {
+      "id": "ru_explicit_person_date",
+      "language": "ru",
+      "text": "Председатель: Дина, подготовьте перечень запасных деталей до 2026-10-07.\nДина: Хорошо, подготовлю.",
+      "expected": [
+        {
+          "assignee": "Дина",
+          "due_date": "2026-10-07",
+          "due_text": "до 2026-10-07",
+          "evidence_terms": [
+            "перечень",
+            "запасных",
+            "деталей"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "kk_explicit_calendar_date",
+      "language": "kk",
+      "text": "Төраға: Әлия, қоймадағы жабдықтар туралы есепті 2026 жылғы 7 қазанға дейін дайындаңыз.\nӘлия: Жақсы, дайындаймын.",
+      "expected": [
+        {
+          "assignee": "Әлия",
+          "due_date": "2026-10-07",
+          "due_text": "2026 жылғы 7 қазанға дейін",
+          "evidence_terms": [
+            "қоймадағы",
+            "жабдықтар",
+            "есепті"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mixed_self_commitment",
+      "language": "ru-kk",
+      "text": "Председатель: Кто подготовит перевод инструкции?\nМарат: Аударманы өзім дайындаймын, 2026 жылғы 9 қазанға дейін жіберемін.\nПредседатель: Хорошо, Марат, договорились.",
+      "expected": [
+        {
+          "assignee": "Марат",
+          "due_date": "2026-10-09",
+          "due_text": "2026 жылғы 9 қазанға дейін",
+          "evidence_terms": [
+            "Аударманы",
+            "өзім",
+            "дайындаймын"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ru_deadline_replaced",
+      "language": "ru",
+      "text": "Председатель: Олег, подготовьте график ремонта до 2026-10-05.\nОлег: До пятого не успею, нужно согласовать доступ.\nПредседатель: Тогда прежний срок отменяем. Окончательный срок по графику ремонта — до 2026-10-09.\nОлег: Принято.",
+      "expected": [
+        {
+          "assignee": "Олег",
+          "due_date": "2026-10-09",
+          "due_text": "до 2026-10-09",
+          "evidence_terms": [
+            "график",
+            "ремонта",
+            "Окончательный"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ru_no_new_action",
+      "language": "ru",
+      "text": "Нина: В прошлом месяце мы обновили инструкцию и завершили проверку склада.\nАрман: Да, результаты уже утверждены.\nПредседатель: Это информационный доклад. Новых поручений сегодня нет.",
+      "expected": []
+    },
+    {
+      "id": "ru_unknown_assignee_and_deadline",
+      "language": "ru",
+      "text": "Председатель: Нужно подготовить перечень рисков нового склада. Ответственного пока не назначаем, срок также не определён.\nНина: Записала, оба поля оставлю на уточнение.",
+      "expected": [
+        {
+          "assignee": "",
+          "due_date": null,
+          "due_text": null,
+          "evidence_terms": [
+            "перечень",
+            "рисков",
+            "склада"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ru_contract_rule_is_not_task_deadline",
+      "language": "ru",
+      "text": "Председатель: Лейла, обновите шаблон договора: добавьте правило, что подрядчик выставляет счёт в течение пяти рабочих дней после приёмки работ. Срок обновления шаблона пока не установлен.\nЛейла: Принято.",
+      "expected": [
+        {
+          "assignee": "Лейла",
+          "due_date": null,
+          "due_text": null,
+          "evidence_terms": [
+            "обновите",
+            "шаблон",
+            "договора"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mixed_two_owners_and_department",
+      "language": "ru-kk",
+      "text": "Председатель: Юридический отдел, проверьте условия гарантии до 2026-10-12.\nТөраға: Аружан, жеткізу кестесін 2026 жылғы 14 қазанға дейін келісіңіз.\nАружан: Келістік.",
+      "expected": [
+        {
+          "assignee": "Юридический отдел",
+          "due_date": "2026-10-12",
+          "due_text": "до 2026-10-12",
+          "evidence_terms": [
+            "проверьте",
+            "условия",
+            "гарантии"
+          ]
+        },
+        {
+          "assignee": "Аружан",
+          "due_date": "2026-10-14",
+          "due_text": "2026 жылғы 14 қазанға дейін",
+          "evidence_terms": [
+            "жеткізу",
+            "кестесін",
+            "келісіңіз"
+          ]
+        }
+      ]
+    }
+  ]
+}

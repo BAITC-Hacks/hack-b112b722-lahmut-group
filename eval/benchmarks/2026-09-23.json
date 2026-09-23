@@ -1,0 +1,116 @@
+{
+  "date": "2026-09-23",
+  "measurement_notes": "Text scenarios are synthetic regression checks, not general model accuracy. Requirements coverage is an internal weighted checklist, not a jury score. Raw meeting recordings and transcripts are not published here.",
+  "requirements": {
+    "confirmed": 3,
+    "partial": 4,
+    "total": 7,
+    "partial_weight": 0.5,
+    "coverage_percent": 71.42857142857143
+  },
+  "unit_tests": {
+    "passed": 48,
+    "total": 48,
+    "location": "Brev L40S Linux"
+  },
+  "text_comparison_v2": {
+    "qwen3:8b": {
+      "semantic_cases_passed": 4,
+      "total": 8,
+      "strict_cases_passed": 3
+    },
+    "qwen3:32b": {
+      "semantic_cases_passed": 8,
+      "total": 8,
+      "strict_cases_passed": 8
+    }
+  },
+  "audio_runs": [
+    {
+      "report": "meeting-1-final-v2.json",
+      "report_sha256": "ebf019b3cfd7a7d97557f3485b5d091ca60bd7fccb991b6becf4d217f99bfb28",
+      "status": "completed",
+      "source_sha256": "0f18f11a6f65f9a2bad6497f387b224c775885a03a811edf3fb15c5238db6f54",
+      "adapter_sha256": "a345ceec546cc5cd3af1f8de6e58ab5612eaa7c65c0d557766741c13e9169a78",
+      "audio_seconds": 274.25,
+      "elapsed_seconds": 56.036,
+      "timings": {
+        "asr_seconds": 16.187,
+        "diarization_seconds": 5.901,
+        "gap_recovery_seconds": 0.0
+      },
+      "configuration": {
+        "ASR_MODEL": "/home/ubuntu/hatama/models/gpu/asr",
+        "ASR_DEVICE": "cuda",
+        "ASR_COMPUTE_TYPE": "int8_float16",
+        "ASR_GAP_RECOVERY": "true",
+        "DIARIZATION_MODEL_PATH": "/home/ubuntu/hatama/models/gpu/diarization",
+        "OLLAMA_MODEL": "qwen3:32b",
+        "OLLAMA_THINKING": "false",
+        "WHISPER_CPP_BIN": "",
+        "WHISPER_CPP_MODEL": ""
+      }
+    },
+    {
+      "report": "meeting-2-final-v2.json",
+      "report_sha256": "0081ceae7e2eadb86133e952259eebf962f48f1d0f489cc50b4e9ccdd91d6a85",
+      "status": "completed",
+      "source_sha256": "b7a42833d0691b99af300a24c7dcdeaf05378355633fb867ef6bfc9e2a8f8f46",
+      "adapter_sha256": "a345ceec546cc5cd3af1f8de6e58ab5612eaa7c65c0d557766741c13e9169a78",
+      "audio_seconds": 206.03125,
+      "elapsed_seconds": 47.538,
+      "timings": {
+        "asr_seconds": 14.634,
+        "diarization_seconds": 5.222,
+        "gap_recovery_seconds": 3.791
+      },
+      "configuration": {
+        "ASR_MODEL": "/home/ubuntu/hatama/models/gpu/asr",
+        "ASR_DEVICE": "cuda",
+        "ASR_COMPUTE_TYPE": "int8_float16",
+        "ASR_GAP_RECOVERY": "true",
+        "DIARIZATION_MODEL_PATH": "/home/ubuntu/hatama/models/gpu/diarization",
+        "OLLAMA_MODEL": "qwen3:32b",
+        "OLLAMA_THINKING": "false",
+        "WHISPER_CPP_BIN": "",
+        "WHISPER_CPP_MODEL": ""
+      }
+    }
+  ],
+  "kazakh_asr": {
+    "dataset": {
+      "dataset": "google/fleurs",
+      "configuration": "kk_kz",
+      "split": "test",
+      "revision": "4683b04",
+      "source_card": "https://huggingface.co/datasets/google/fleurs",
+      "metadata_source": "https://huggingface.co/datasets/google/fleurs/resolve/4683b04/data/kk_kz/test.tsv",
+      "archive_source": "https://huggingface.co/datasets/google/fleurs/resolve/4683b04/data/kk_kz/audio/test.tar.gz",
+      "license": "CC-BY-4.0",
+      "license_url": "https://creativecommons.org/licenses/by/4.0/",
+      "citation": "Conneau et al. (2022), FLEURS: Few-shot Learning Evaluation of Universal Representations of Speech, https://arxiv.org/abs/2205.12446",
+      "selection": "First three archive entries with distinct sentence IDs and duration 2–20 seconds; no selection by text or ASR result."
+    },
+    "model": "/home/ubuntu/hatama/models/gpu/asr",
+    "model_revision": {
+      "repo": "Systran/faster-whisper-large-v3",
+      "revision": "edaa852ec7e145841d8ffdb056a99866b5f0a478"
+    },
+    "normalization": "Unicode NFC, lowercase, delete Unicode punctuation (category P*), split on whitespace. Numerals are not expanded.",
+    "metric": "Word-level Levenshtein edit distance divided by reference word count; micro WER sums distances and reference words.",
+    "limitations": "Three isolated read-speech clips only; not a Kazakh meeting benchmark, diarization test, or RU/KZ code-switching evaluation.",
+    "overall": {
+      "clips": 3,
+      "reference_words": 53,
+      "edit_distance": 17,
+      "micro_wer": 0.32075471698113206,
+      "audio_seconds": 43.14
+    },
+    "report_sha256": "5a73c07dfaf3a8a42aec87ec0fd1dda03e618824ddc9a4f446ae41b5b5991aa1"
+  },
+  "raw_reports": {
+    "suite-qwen32-v2.json": "d834f336dc55169aead068d8f84353d15501d65325232a5a0920307d679846ca",
+    "suite-qwen32-v5.json": "ebcf294e360380a675aebf61f471b470259ef939c3af797e41d5c018d2e835f0",
+    "suite-qwen8-v2.json": "2f7777a629ae78acc785e7b6c99900913c73a458abefc181894095386ca247be"
+  }
+}

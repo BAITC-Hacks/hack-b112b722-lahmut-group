@@ -10,6 +10,8 @@
 
 ## Текущее состояние
 
+**Актуальный выбранный профиль после сравнения моделей: Qwen3:32b без thinking, Whisper large-v3 и Community-1 на L40S.** Результаты улучшений, границы качества и воспроизводимые проверки: [ML_QUALITY_REPORT.md](ML_QUALITY_REPORT.md). Таблица ниже сохраняет исходный baseline с 8B и не описывает последнюю конфигурацию.
+
 - Готовы ASR/диаризация/извлечение, отдельная подготовка весов и команда первого контрольного прогона.
 - Модульные тесты используют подмену моделей. Проверка FFmpeg действительно декодирует аудио, но не проверяет распознавание.
 - Подтверждение качества моделей публикуется только после фактического прогона; см. `eval/results/` на машине испытаний и `eval/README.md`.
@@ -17,7 +19,7 @@
 - Первый запуск pyannote через путь к файлу завершился ошибкой TorchCodec из-за отсутствующих динамических библиотек FFmpeg. Исправлено: FFmpeg конвертирует вход в mono 16 kHz PCM WAV, а ML-адаптер подаёт WAV-тензор напрямую в pyannote.
 - Текст всё ещё имеет расхождения в именах и географическом названии по сравнению с эталонным текстом; прослушать аудио и вычислить WER ещё нужно. Три speaker-кластера не подтверждают, что это ровно три разных человека.
 - На GPU-сервере 16 модульных тестов ML прошли 2026-09-23; эти тесты не подтверждают качество моделей.
-- Целевой серверный стек: Whisper large-v3, pyannote Community-1 и Ollama Qwen3:8b. Прежний Whisper small не подтверждает качество целевого large-v3.
+- Выбранный серверный стек: Whisper large-v3, pyannote Community-1 и Ollama Qwen3:32b. В исходном baseline ниже использовалась 8B. Прежний Whisper small не подтверждает качество large-v3.
 - Brev `hatama-ml-gpu` во время проверки 2026-09-23 работал: NVIDIA L40S, драйвер 565.57.01, 46068 MiB VRAM, Ubuntu Linux. В контейнере доступно 124 GB диска, после подготовки стека свободно 88 GB. Текущий тариф не проверен. После тестов экземпляр остановлен; `brev ls` подтвердил `STOPPED`.
 
 ### Фактические GPU-результаты, 2026-09-23
@@ -79,6 +81,7 @@ export ASR_MODEL="$PWD/models/gpu/asr"
 export DIARIZATION_MODEL_PATH="$PWD/models/gpu/diarization"
 export ASR_DEVICE=cuda
 export ASR_COMPUTE_TYPE=int8_float16
+export ASR_GAP_RECOVERY=true
 ```
 
 Веса large-v3, pyannote и LLM освобождаются между тяжёлыми этапами. Диаризация не требует имени участника, однако привязка голоса к имени требует контекста и проверки человеком.
@@ -86,13 +89,18 @@ export ASR_COMPUTE_TYPE=int8_float16
 Для полного протокола установить и запустить официальный Ollama на той же машине, затем отдельно скачать модель:
 
 ```bash
-ollama pull qwen3:8b
+ollama pull qwen3:32b
 export OLLAMA_BASE_URL=http://127.0.0.1:11434
-export OLLAMA_MODEL=qwen3:8b
+export OLLAMA_MODEL=qwen3:32b
+export OLLAMA_THINKING=false
 eval/.venv/bin/python scripts/check_models.py --strict
 ```
 
 Если `probe` сообщает отсутствие LLM, первый ASR/диаризация checkpoint всё ещё можно выполнять: он не зависит от Ollama.
+
+32B занимает около 20 GB на диске в Ollama и проверена на L40S с 48 GB VRAM. Профиль `.env.example` предназначен для этого сервера. Значение по умолчанию в коде остаётся `qwen3:8b` для совместимости; выставляйте `OLLAMA_MODEL` явно. Thinking и отдельный второй LLM-проход не показали достаточного выигрыша на встречах и не входят в выбранный профиль.
+
+`ASR_GAP_RECOVERY=true` включает до трёх дополнительных коротких ASR-проходов: только внутренние пробелы 1–10 секунд, где диаризация покрывает не менее половины интервала речью. Низкая средняя уверенность и спорные границы отклоняются; восстановленная речь всегда помечается для проверки. Без переменной режим выключен. Это исправляет наблюдённый пропуск, но не гарантирует обнаружение всех ошибок распознавания.
 
 Endpoint Ollama по умолчанию loopback; допускается явно заданный приватный IP. Публичные адреса, прокси и redirect запрещены в ML-адаптере. Веса должны быть локальными; при их отсутствии inference не скачивает их автоматически. Для проверки полного офлайн-режима ограничить исходящую сеть на машине и повторить запуск после подготовки всех весов.
 
@@ -124,7 +132,7 @@ eval/.venv/bin/python scripts/run_ml_checkpoint.py eval/audio/meeting-1.mp3 \
 
 ```bash
 eval/.venv/bin/python scripts/run_ml_checkpoint.py eval/audio/meeting-1.mp3 \
-  --occurred-at 2026-09-23 --seconds 3600 --min-speakers 2 --full \
+  --occurred-at 2026-09-23 --seconds 3600 --min-speakers 2 --full --diagnostics \
   --output eval/results/meeting-1-full.json
 ```
 
@@ -137,7 +145,25 @@ eval/.venv/bin/python scripts/run_ml_checkpoint.py eval/audio/meeting-1.mp3 \
 ## 6. Регрессионные проверки без моделей на сервере
 
 ```bash
-PYTHONPATH=backend eval/.venv/bin/python -m unittest backend.tests.test_ml -v
+PYTHONPATH=backend eval/.venv/bin/python -m unittest \
+  backend.tests.test_ml backend.tests.test_ml_alignment \
+  backend.tests.test_ml_extraction_quality backend.tests.test_ml_diagnostics \
+  backend.tests.test_ml_gap_recovery -v
 ```
 
 Проверяются источники поручений, сроки, сопоставление имён, запрет внешних endpoints, обрезанный JSON, сохранение полного текста и смена говорящего внутри предложения. Эти проверки дополняют реальный inference, а не заменяют его.
+
+## 7. Сравнение LLM на одинаковом входе
+
+```bash
+eval/.venv/bin/python scripts/evaluate_extraction.py \
+  --cases eval/text_quality_cases.json --model qwen3:32b \
+  --output eval/results/suite-qwen32.json
+eval/.venv/bin/python scripts/evaluate_extraction.py \
+  --checkpoint eval/results/meeting-1-full.json --model qwen3:32b \
+  --output eval/results/meeting-1-extraction.json
+```
+
+Поле `expected` из набора никогда не передаётся модели. Сохранённый checkpoint позволяет сравнить извлечение на одном и том же тексте, отдельно от качества ASR. Скрипт фиксирует входной и программный SHA-256, digest модели, время и фактический ответ. `--thinking` — только отдельный эксперимент. `scripts/evaluate_refinement.py` сохраняет исследовательский второй проход; основной backend его не вызывает.
+
+`--diagnostics` у speech-runner сохраняет оригинальные ASR-слова, вероятности, обе аннотации диаризации и попытки восстановления. Времена относятся к исходной записи, в том числе при `--offset`; внутренние диагностические поля не добавляются в HTTP-контракт. Для VAD A/B доступен `scripts/compare_asr_vad.py` (только Linux/CUDA); исходные тексты и эталоны не используются как подсказка модели.
