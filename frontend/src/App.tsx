@@ -939,16 +939,6 @@ export default function App() {
                               ))}
                             </div>
                           </section>
-                          {selected.approved &&
-                            draft.actions.some(
-                              (a) => a.due_date && a.due_text,
-                            ) && (
-                              <p className="notice-box">
-                                Проверьте сроки в DOCX: текущий экспорт
-                                показывает исходную формулировку и может не
-                                включать отдельно исправленную календарную дату.
-                              </p>
-                            )}
                           <div className="approval-help" role="status">
                             {dirty
                               ? "Есть несохранённые изменения. Сначала сохраните, затем утвердите."
