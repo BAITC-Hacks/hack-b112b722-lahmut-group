@@ -11,7 +11,8 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from fastapi import Body, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, Response
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import FileResponse, JSONResponse, Response
 
 from . import storage
 from .export import render_docx
@@ -27,12 +28,17 @@ executor: ThreadPoolExecutor | None = None
 async def lifespan(_: FastAPI):
     global executor
     storage.initialize()
+    storage.recover_interrupted_jobs()
     executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="local-ml")
     for record in storage.pending_jobs():
         executor.submit(_run_job, record["meeting"]["id"])
-    yield
-    executor.shutdown(wait=False, cancel_futures=True)
-    executor = None
+    try:
+        yield
+    finally:
+        # Drain active inference before releasing storage; unstarted jobs remain
+        # queued in SQLite and will resume at the next startup.
+        worker, executor = executor, None
+        worker.shutdown(wait=True, cancel_futures=True)
 
 
 def _enqueue(meeting_id: str) -> None:
@@ -51,6 +57,17 @@ app.add_middleware(
 )
 
 
+@app.exception_handler(RequestValidationError)
+async def validation_error(_, exc):
+    messages = [f"{'.'.join(str(part) for part in error['loc'])}: {error['msg']}" for error in exc.errors()]
+    return JSONResponse(status_code=422, content={"detail": "; ".join(messages)})
+
+
+@app.exception_handler(storage.ActionIDConflict)
+async def action_id_conflict(_, exc):
+    return JSONResponse(status_code=409, content={"detail": str(exc)})
+
+
 def _bad(message: str, code: int = 422):
     raise HTTPException(status_code=code, detail=message)
 
@@ -58,12 +75,15 @@ def _bad(message: str, code: int = 422):
 def _required_text(value, name: str, limit: int = 200) -> str:
     if not isinstance(value, str) or not value.strip() or len(value) > limit:
         _bad(f"{name} must be non-empty text up to {limit} characters")
+    _optional_text(value, name, limit)
     return value.strip()
 
 
 def _optional_text(value, name: str, limit: int = 100000) -> str:
     if not isinstance(value, str) or len(value) > limit:
         _bad(f"{name} must be text up to {limit} characters")
+    if any(ord(c) < 32 and c not in "\t\n\r" or 0xD800 <= ord(c) <= 0xDFFF or ord(c) in (0xFFFE, 0xFFFF) for c in value):
+        _bad(f"{name} contains unsupported control characters")
     return value
 
 
@@ -124,7 +144,7 @@ def _segments(value) -> list[dict]:
         start, end = item.get("start_ms"), item.get("end_ms")
         if type(start) is not int or type(end) is not int or start < 0 or end < start or end > 7 * 24 * 3600 * 1000:
             _bad("segment timestamps must be ordered nonnegative milliseconds")
-        result.append({"id": segment_id, "start_ms": start, "end_ms": end, "speaker_id": _required_text(item.get("speaker_id"), "segment.speaker_id", 100), "text": _required_text(item.get("text"), "segment.text", 10000)})
+        result.append({"id": segment_id, "start_ms": start, "end_ms": end, "speaker_id": _optional_text(item.get("speaker_id"), "segment.speaker_id", 100), "text": _required_text(item.get("text"), "segment.text", 10000)})
     return result
 
 
@@ -182,7 +202,7 @@ def _revision(meeting: dict, requested):
 
 def _run_job(meeting_id: str):
     record = storage.get_record(meeting_id)
-    if not record or record["meeting"]["source_mode"] == "demo":
+    if not record or record["meeting"]["source_mode"] == "demo" or record["meeting"]["status"] != "queued":
         return
 
     def set_stage(stage: str):
@@ -203,11 +223,23 @@ def _run_job(meeting_id: str):
         if not isinstance(result, dict):
             raise RuntimeError("Local model returned an invalid result object")
         segments = _segments(result.get("segments"))
+        if not segments:
+            raise RuntimeError("Local model returned no transcript segments")
+        if meeting["source_mode"] == "text" and any(s["start_ms"] or s["end_ms"] for s in segments):
+            raise RuntimeError("Text import must not contain audio timestamps")
         actions = _actions(result.get("actions"), {segment["id"] for segment in segments})
-        summary = _optional_text(result.get("summary"), "summary", 100000)
+        # ML IDs may be deterministic for identical input. Scope them to this
+        # meeting once at ingestion; all subsequent edits preserve these IDs.
+        for action in actions:
+            action["id"] = str(uuid.uuid5(uuid.UUID(meeting_id), action["id"]))
+            if not action["evidence_segment_ids"]:
+                raise RuntimeError("Local model returned an action without source evidence")
+        summary = _required_text(result.get("summary"), "summary", 100000)
         warnings = _list(result.get("warnings"), "warnings", 1000)
         if any(not isinstance(w, str) or len(w) > 1000 for w in warnings):
             raise RuntimeError("Local model returned invalid warnings")
+        for warning in warnings:
+            _optional_text(warning, "warning", 1000)
 
         def complete(current):
             current.update(status="review_ready", segments=segments, actions=actions, summary=summary, warnings=warnings, error=None, approved=False)
@@ -218,7 +250,10 @@ def _run_job(meeting_id: str):
         message = str(exc).strip() or type(exc).__name__
         if isinstance(exc, HTTPException):
             message = f"Local processing returned invalid data: {exc.detail}"
-        storage.update(meeting_id, lambda meeting: meeting.update(status="failed", error=message[:2000], approved=False))
+        def fail(current):
+            current.update(status="failed", error=f"{current['status']}: {message}"[:2000], approved=False)
+            current["revision"] += 1
+        storage.update(meeting_id, fail)
 
 
 @app.get("/api/health")
@@ -344,6 +379,8 @@ def approve_meeting(meeting_id: str, payload: dict = Body(...)):
         for action in meeting["actions"]:
             if not action["title"] or not action["assignee"] or action["review_reasons"]:
                 _bad("Resolve empty titles, assignees and review reasons before approval", 409)
+        if meeting["approved"]:
+            return
         meeting["approved"] = True
         meeting["revision"] += 1
 
@@ -355,10 +392,11 @@ def approve_meeting(meeting_id: str, payload: dict = Body(...)):
 
 @app.get("/api/meetings/{meeting_id}/export.docx")
 def export_meeting(meeting_id: str):
-    meeting = _record(meeting_id)["meeting"]
+    record = _record(meeting_id)
+    meeting = record["meeting"]
     if not meeting["approved"]:
         _bad("Approve the meeting before export", 409)
-    content = render_docx(meeting)
+    content = render_docx(record["approved_meeting"] or meeting)
     return Response(content=content, media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document", headers={"Content-Disposition": f'attachment; filename="meeting-{meeting_id}.docx"'})
 
 
@@ -398,7 +436,9 @@ def patch_action(action_id: str, payload: dict = Body(...)):
                 _bad("Approve the meeting before changing action status", 409)
             for action in current["actions"]:
                 if action["id"] == action_id:
-                    action["status"] = payload["status"]
+                    if action["status"] != payload["status"]:
+                        action["status"] = payload["status"]
+                        current["revision"] += 1
                     return action
             _bad("Action not found", 404)
 
