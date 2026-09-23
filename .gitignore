@@ -9,8 +9,13 @@ data/
 models/
 node_modules/
 dist/
+*.tsbuildinfo
 .DS_Store
 *.log
 .uv-cache/
+.npm-cache/
 artifacts/
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
 
