@@ -1,0 +1,21 @@
+{
+  "source_document": "https://docs.google.com/document/d/1umHtiQ4og9i2_8m6fSBulffN5K-0q_pt/edit",
+  "model_report": "eval/results/meeting-1-final-v2.json",
+  "reference_format": "Official Google Docs PDF export, unmodified",
+  "model_report_sha256": "ebf019b3cfd7a7d97557f3485b5d091ca60bd7fccb991b6becf4d217f99bfb28",
+  "backend_export_sha256": "9b57f82fe364d3bdbf50a3b7ba3783bce11097fd75440292dede28f4d1b734a0",
+  "model_actions": 10,
+  "model_segments": 27,
+  "model_text_manually_corrected": false,
+  "disclosures": [
+    "Unknown actual meeting date",
+    "Unapproved ML draft",
+    "Known wrong assignee preserved"
+  ],
+  "reference-meeting-1.pdf": {
+    "sha256": "e9f32b711bb09c62bf7ff51f099d5a4b7faa183eff469f13b48bf7279aea5ed4"
+  },
+  "model-meeting-1.pdf": {
+    "sha256": "1b7fc3db47660cf7acbd2bd36a7d6f16eeb93519933960ebd678bae8e96146fb"
+  }
+}

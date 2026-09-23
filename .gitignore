@@ -15,7 +15,12 @@ dist/
 .uv-cache/
 .npm-cache/
 artifacts/
+!docs/artifacts/
+docs/artifacts/*
+!docs/artifacts/*.pdf
+!docs/artifacts/README.md
+!docs/artifacts/pdf-provenance.json
+!docs/artifacts/pdf-qa.json
 *.sqlite3
 *.sqlite3-wal
 *.sqlite3-shm
-

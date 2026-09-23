@@ -1,0 +1,16 @@
+{
+  "reference-meeting-1": {
+    "pages": 4,
+    "text_characters": 7225,
+    "replacement_characters": 0
+  },
+  "model-meeting-1": {
+    "pages": 6,
+    "text_characters": 15802,
+    "replacement_characters": 0,
+    "draft_notice": true,
+    "conditional_date": true,
+    "wrong_assignee_preserved": true,
+    "approved_label_absent": true
+  }
+}
